@@ -8,8 +8,7 @@
 using namespace std;
 
 typedef vector<double> Array;
-typedef vector<Array> Matrix;
-typedef vector<Matrix> Image;
+typedef vector<Array> Matrix; typedef vector<Matrix> Image;
 
 Matrix getGaussian(int height, int width, double sigma)
 {
@@ -55,8 +54,8 @@ void saveImage(Image &image, const char *filename)
 }
 
 
-// has problem
-Image& loadImage(const char *filename)
+// returning reference to local variable imageMatrix -> segfault
+Image& loadImage_segfault(const char *filename)
 {
     png::image<png::rgb_pixel> image(filename);
     Image imageMatrix(3, Matrix(image.get_height(), Array(image.get_width())));
@@ -74,8 +73,8 @@ Image& loadImage(const char *filename)
 }
 
 
-// has another problem
-Image* loadImage_v2(const char *filename)
+// 
+Image* loadImage_correct(const char *filename)
 {
     png::image<png::rgb_pixel> image(filename);
     Image* imageMatrix = new Image(3, Matrix(image.get_height(), Array(image.get_width())));
@@ -93,7 +92,7 @@ Image* loadImage_v2(const char *filename)
 }
 
 
-Image applyFilter(Image &image, Matrix &filter){
+Image applyFilter_invalid_access(Image &image, Matrix &filter){
     assert(image.size()==3 && filter.size()!=0);
 
     int height = image[0].size();
@@ -105,10 +104,14 @@ Image applyFilter(Image &image, Matrix &filter){
     int d,i,j,h,w;
 
     Image newImage(3, Matrix(newImageHeight, Array(newImageWidth)));
+    //Image* newImage = new Image(3, Matrix(newImageHeight, Array(newImageWidth)));
+    //Image* imageMatrix = new Image(3, Matrix(image.get_height(), Array(image.get_width())));
 
     for (d = 0 ; d < 3 ; d++) {
         for (i = 0 ; i < newImageWidth ; i++) {
             for (j=0 ; j< newImageHeight; j++) {
+        //for (i = 0 ; i < newImageHeight; i++) {
+        //    for (j=0 ; j< newImageWidth; j++) {
                 for (h=i ; h<i+filterHeight ; h++) {
                     for (w=j ; w<j+filterWidth ; w++) {
                         newImage[d][i][j] += filter[h-i][w-j]*image[d][h][w];
@@ -122,7 +125,7 @@ Image applyFilter(Image &image, Matrix &filter){
 }
 
 // This is corerct, but slow
-Image applyFilter_v2(Image &image, Matrix &filter){
+Image applyFilter_high_miss(Image &image, Matrix &filter){
     assert(image.size()==3 && filter.size()!=0);
 
     int height = image[0].size();
@@ -151,7 +154,7 @@ Image applyFilter_v2(Image &image, Matrix &filter){
 }
 
 // this is correct and fast
-Image applyFilter_v3(Image &image, Matrix &filter){
+Image applyFilter_low_miss(Image &image, Matrix &filter){
     assert(image.size()==3 && filter.size()!=0);
 
     int height = image[0].size();
@@ -179,34 +182,107 @@ Image applyFilter_v3(Image &image, Matrix &filter){
     return newImage;
 }
 
-Image applyFilter(Image &image, Matrix &filter, int times)
-{
-    Image newImage = image;
-    for(int i=0 ; i<times ; i++) {
-        newImage = applyFilter(newImage, filter);
-    }
-    return newImage;
-}
-
-int main()
-{
+void memcheck_segfault() {
     Matrix filter = getGaussian(5, 5, 10.0);
 
     cout << "Loading image..." << endl;
-    Image* image = loadImage_v2("image.png");
+    Image image = loadImage_segfault("lorge_cat.png");
+
+    //cout << "Applying filter..." << endl;
+
+    //Image newImage = applyFilter(image, filter);
+
+    //cout << "Saving image..." << endl;
+    //saveImage(newImage, "newImage.png");
+}
+
+void memcheck_leak() {
+    Matrix filter = getGaussian(5, 5, 10.0);
+
+    cout << "Loading image..." << endl;
+    Image* image = loadImage_correct("lorge_cat.png");
+}
+
+
+// this demo must be performed through valgrind, else the new image will not be saved.
+void memcheck_invalid_access() {
+    Matrix filter = getGaussian(5, 5, 10.0);
+
+    cout << "Loading image..." << endl;
+    Image* image = loadImage_correct("smol_cat.png");
+
+    cout << "Applying filter..." << endl;
+    Image newImage = applyFilter_invalid_access(*image, filter);
+
+    cout << "Saving image..." << endl;
+    saveImage(newImage, "new_smol_cat.png");
+
+    delete image;
+}
+
+void cachegrind_high_miss() {
+    Matrix filter = getGaussian(5, 5, 10.0);
+
+    cout << "Loading image..." << endl;
+    Image* image = loadImage_correct("lorge_cat.png");
 
     cout << "Applying filter..." << endl;
     auto start = std::chrono::steady_clock::now();
 
-    Image newImage = applyFilter_v3(*image, filter);
+    Image newImage = applyFilter_high_miss(*image, filter);
 
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
 
     cout << "Saving image..." << endl;
-    saveImage(newImage, "newImage.png");
+    saveImage(newImage, "new_lorge_cat.png");
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+!!!!!!!!!!!!!!!!!!!!!!!!!!111
+    why is this faster than low miss bruuh
 
     // delete image;
-    cout << "Done! ApplyFilter Took " << elapsed_seconds.count() * 1000 << " ms " << endl;
+    cout << "Done! High cache miss ApplyFilter Took " << elapsed_seconds.count() * 1000 << " ms " << endl;
+}
 
+void cachegrind_low_miss() {
+    Matrix filter = getGaussian(5, 5, 10.0);
+
+    cout << "Loading image..." << endl;
+    Image* image = loadImage_correct("lorge_cat.png");
+
+    cout << "Applying filter..." << endl;
+    auto start = std::chrono::steady_clock::now();
+
+    Image newImage = applyFilter_low_miss(*image, filter);
+
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+
+    cout << "Saving image..." << endl;
+    saveImage(newImage, "new_lorge_cat.png");
+
+    // delete image;
+    cout << "Done! Low cache miss ApplyFilter Took " << elapsed_seconds.count() * 1000 << " ms " << endl;
+}
+
+
+int main()
+{
+    //memcheck_segfault();
+    //memcheck_leak();
+    // need to run through valgrind
+    //memcheck_invalid_access();
+    //cachegrind_high_miss();
+    //cachegrind_low_miss();
 }
