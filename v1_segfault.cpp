@@ -39,12 +39,12 @@ Image applyFilter_invalid_access(Image &image, Matrix &filter) {
 
   Image newImage(3, Matrix(newImageHeight, Array(newImageWidth)));
 
-  for (d = 0; d < 3; d++) {
-    for (i = 0; i < newImageWidth; i++) {
-      for (j = 0; j < newImageHeight; j++) {
+  for (j = 0; j < newImageWidth; j++) {
+    for (i = 0; i < newImageHeight; i++) {
+      for (w = j; w < j + filterWidth; w++) {
         for (h = i; h < i + filterHeight; h++) {
-          for (w = j; w < j + filterWidth; w++) {
-            newImage[d][i][j] += filter[h - i][w - j] * image[d][h][w];
+          for (d = 0; d < 3; d++) {
+            newImage[d][i][j] += filter[h - i][w - j] * image[d][w][h];
           }
         }
       }
