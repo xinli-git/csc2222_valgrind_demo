@@ -5,7 +5,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 filename=${1}
-exe_name="${filename%.*}"
+exe_name="exe_${filename%.*}"
 
 cmd="g++ -g -O2 -std=c++11 $filename utils.cpp -lm -lpng -o $exe_name"
 echo $cmd
