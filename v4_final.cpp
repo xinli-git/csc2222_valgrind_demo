@@ -59,7 +59,7 @@ Image applyFilter_low_miss(Image &image, Matrix &filter) {
 int main() {
   Matrix filter = getGaussian(5, 5, 10.0);
   cout << "Loading image..." << endl;
-  Image *image = loadImage_correct("large_cat.png");
+  Image *image = loadImage_correct("images/large_cat.png");
 
   cout << "Applying filter..." << endl;
   auto start = std::chrono::steady_clock::now();

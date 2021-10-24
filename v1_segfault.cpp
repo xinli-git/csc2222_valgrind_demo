@@ -58,7 +58,7 @@ int main() {
   Matrix filter = getGaussian(5, 5, 10.0);
 
   cout << "Loading image..." << endl;
-  Image image = loadImage_segfault("small_cat.png");
+  Image image = loadImage_segfault("images/small_cat.png");
 
   cout << "Applying filter..." << endl;
   auto start = std::chrono::steady_clock::now();

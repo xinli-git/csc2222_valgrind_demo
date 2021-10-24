@@ -1,5 +1,12 @@
 #!/bin/bash
 
-exe_name=${1-"test"}
+if [ "$#" -ne 1 ]; then
+	echo "Usage ./build.sh <main cpp filename>"
+fi
 
-g++ -g -O0 -std=c++11 main.cpp -lm -lpng -o $exe_name
+filename=${1}
+exe_name="${filename%.*}"
+
+cmd="g++ -g -O2 -std=c++11 $filename utils.cpp -lm -lpng -o $exe_name"
+echo $cmd
+eval $cmd
